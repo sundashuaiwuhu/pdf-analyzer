@@ -65,17 +65,21 @@ export default function Home() {
     if (!file) return;
 
     setLoading(true);
+    setResult("正在解析PDF...");
     try {
+      console.log("Starting PDF parsing...");
       const text = await extractTextFromPDF(file);
+      console.log("PDF parsed, text length:", text.length);
+      
       if (!text || text.length < 50) {
         setResult("此PDF可能是扫描版，无法提取文字。请转换为文字版PDF后重试。");
       } else {
         setPdfText(text);
         setResult("PDF上传成功！请选择分析功能。");
       }
-    } catch (error) {
-      console.error(error);
-      setResult("PDF解析失败，请确保是有效的PDF文件");
+    } catch (error: any) {
+      console.error("PDF parse error:", error);
+      setResult("PDF解析失败: " + error.message);
     }
     setLoading(false);
   };
