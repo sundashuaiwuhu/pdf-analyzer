@@ -36,12 +36,15 @@ export default function Home() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
-    if (selectedFile && selectedFile.type === "application/pdf") {
+    if (selectedFile && (
+      selectedFile.type === "application/pdf" || 
+      selectedFile.type.startsWith("image/")
+    )) {
       setFile(selectedFile);
       setResult("");
       setPdfText("");
     } else {
-      alert("Please upload a PDF file");
+      alert("Please upload a PDF or image file");
     }
   };
 
@@ -116,15 +119,15 @@ export default function Home() {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".pdf"
+              accept=".pdf,.png,.jpg,.jpeg,.gif,.bmp,.webp"
               onChange={handleFileChange}
               className="hidden"
             />
             <div className="text-4xl mb-2">📁</div>
             <p className="text-gray-600">
-              Drag and drop your PDF here, or click to browse
+              Drag and drop your PDF or image here, or click to browse
             </p>
-            <p className="text-sm text-gray-400 mt-2">Max file size: 10MB</p>
+            <p className="text-sm text-gray-400 mt-2">Max file size: 10MB (PDF or Image)</p>
           </div>
 
           {file && (
