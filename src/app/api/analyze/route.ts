@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 
 const MINIMAX_API_KEY = process.env.MINIMAX_API_KEY;
-const MINIMAX_BASE_URL = "https://api.minimax.chat/v1/text/chatcompletion_v2";
+const MINIMAX_BASE_URL = "https://api.minimax.chat/v1";
 const MODEL = "abab6.5s-chat";
 
 interface AnalyzeRequest {
@@ -46,7 +46,7 @@ async function callMiniMax(prompt: string): Promise<string> {
         messages: [
           {
             role: "system",
-            content: "你是一个专业的文档分析助手，擅长理解和总结各类文档内容。请用中文回答问题。",
+            content: "You are a helpful assistant.",
           },
           {
             role: "user",
@@ -63,10 +63,16 @@ async function callMiniMax(prompt: string): Promise<string> {
       }
     );
 
+    // 检查响应结构
+    if (!response.data || !response.data.choices || !response.data.choices[0]) {
+      console.error("Invalid API response:", response.data);
+      throw new Error("Invalid API response");
+    }
+
     return response.data.choices[0].message.content;
   } catch (error: any) {
     console.error("MiniMax API error:", error.response?.data || error.message);
-    throw new Error("AI analysis failed");
+    throw new Error(error.response?.data?.base_resp?.status_msg || "AI analysis failed");
   }
 }
 
