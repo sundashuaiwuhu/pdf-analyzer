@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import * as pdfjs from "pdfjs-dist";
-
-// 设置 PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+import { PDFParse } from "pdf-parse";
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,25 +11,22 @@ export async function POST(request: NextRequest) {
     }
 
     const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
-
-    let fullText = "";
-    const maxPages = Math.min(pdf.numPages, 50); // 限制最多50页
-
-    for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
-      const page = await pdf.getPage(pageNum);
-      const textContent = await page.getTextContent();
-      const pageText = textContent.items
-        .map((item: any) => item.str)
-        .join(" ");
-      fullText += pageText + "\n\n";
-    }
+    const buffer = Buffer.from(arrayBuffer);
+    
+    const pdf = new PDFParse(buffer);
+    const data = await pdf.getText();
+    let text = data.text;
 
     // 限制文本长度
     const maxLength = 50000;
-    const truncatedText = fullText.slice(0, maxLength);
+    if (text.length > maxLength) {
+      text = text.slice(0, maxLength) + "\n\n[内容已截断...]";
+    }
 
-    return NextResponse.json({ text: truncatedText });
+    // 清理资源
+    await pdf.destroy();
+
+    return NextResponse.json({ text });
   } catch (error) {
     console.error("PDF extraction error:", error);
     return NextResponse.json(
