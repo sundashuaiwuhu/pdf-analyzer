@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 
 const MINIMAX_API_KEY = process.env.MINIMAX_API_KEY;
-const MINIMAX_BASE_URL = process.env.MINIMAX_BASE_URL || "https://api.minimax.chat/v1";
-const MODEL = "MiniMax-M2.5";
+const MINIMAX_BASE_URL = "https://api.minimax.chat/v1/text/chatcompletion_v2";
+const MODEL = "abab6.5s-chat";
 
 interface AnalyzeRequest {
   text: string;
