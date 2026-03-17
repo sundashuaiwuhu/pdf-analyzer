@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 
-const MINIMAX_API_KEY = process.env.MINIMAX_API_KEY;
-const MINIMAX_BASE_URL = "https://api.minimax.chat/v1";
-const MODEL = "abab6.5s-chat";
+const API_KEY = process.env.API_KEY;
+const BASE_URL = process.env.BASE_URL || "https://api.siliconflow.cn/v1";
+const MODEL = process.env.MODEL || "Qwen/Qwen2.5-7B-Instruct";
 
 interface AnalyzeRequest {
   text: string;
@@ -37,33 +37,34 @@ const PROMPTS = {
 `,
 };
 
-async function callMiniMax(prompt: string): Promise<string> {
+async function callAI(prompt: string): Promise<string> {
   try {
     const response = await axios.post(
-      `${MINIMAX_BASE_URL}/text/chatcompletion_v2`,
+      `${BASE_URL}/chat/completions`,
       {
         model: MODEL,
         messages: [
           {
             role: "system",
-            content: "You are a helpful assistant.",
+            content: "你是一个专业的文档分析助手，擅长理解和总结各类文档内容。请用中文回答问题。",
           },
           {
             role: "user",
             content: prompt,
           },
         ],
+        max_tokens: 2048,
+        temperature: 0.7,
       },
       {
         headers: {
-          Authorization: `Bearer ${MINIMAX_API_KEY}`,
+          Authorization: `Bearer ${API_KEY}`,
           "Content-Type": "application/json",
         },
         timeout: 60000,
       }
     );
 
-    // 检查响应结构
     if (!response.data || !response.data.choices || !response.data.choices[0]) {
       console.error("Invalid API response:", response.data);
       throw new Error("Invalid API response");
@@ -71,20 +72,13 @@ async function callMiniMax(prompt: string): Promise<string> {
 
     return response.data.choices[0].message.content;
   } catch (error: any) {
-    console.error("MiniMax API error:", error.response?.data || error.message);
-    throw new Error(error.response?.data?.base_resp?.status_msg || "AI analysis failed");
+    console.error("API error:", error.response?.data || error.message);
+    throw new Error(error.response?.data?.message || "AI analysis failed");
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    if (!MINIMAX_API_KEY) {
-      return NextResponse.json(
-        { error: "MINIMAX_API_KEY not configured" },
-        { status: 500 }
-      );
-    }
-
     const body: AnalyzeRequest = await request.json();
     const { text, mode, question } = body;
 
@@ -114,7 +108,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Invalid mode" }, { status: 400 });
     }
 
-    const result = await callMiniMax(prompt);
+    const result = await callAI(prompt);
 
     return NextResponse.json({ result });
   } catch (error: any) {
