@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PDFParse } from "pdf-parse";
-import Tesseract from "tesseract.js";
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,46 +11,47 @@ export async function POST(request: NextRequest) {
 
     const fileName = file.name.toLowerCase();
     const arrayBuffer = await file.arrayBuffer();
-    // 转换为 Uint8Array
-    const uint8Array = new Uint8Array(arrayBuffer);
+    const buffer = Buffer.from(arrayBuffer);
     
     let text = "";
-    let isOCR = false;
 
-    // 判断文件类型
+    // 只支持PDF
     if (fileName.endsWith('.pdf')) {
       try {
-        // PDF文件 - 尝试提取文字
-        const pdf = new PDFParse({ data: uint8Array });
-        const textData = await pdf.getText();
-        text = textData.text.trim();
-        await pdf.destroy();
-      } catch (pdfError) {
+        // 动态导入pdf2json
+        const pdf2json = await import("pdf2json");
+        const PDFParser = pdf2json.PDFParser;
+        
+        const pdfParser: any = new PDFParser();
+        
+        // 使用promise包装
+        const pdfData: any = await new Promise((resolve, reject) => {
+          pdfParser.on("pdfParser_dataReady", (data: any) => resolve(data));
+          pdfParser.on("pdfParser_error", (error: any) => reject(error));
+          pdfParser.parseBuffer(buffer);
+        });
+        
+        // 提取所有页面的文本
+        if (pdfData && pdfData.Pages) {
+          text = pdfData.Pages.map((page: any) => {
+            return page.Texts.map((t: any) => 
+              t.R.map((r: any) => decodeURIComponent(r.T)).join("")
+            ).join(" ");
+          }).join("\n\n");
+        }
+        
+      } catch (pdfError: any) {
         console.error("PDF parse error:", pdfError);
-        text = "Unable to parse this PDF. It may be corrupted or password-protected.";
+        text = "";
       }
 
       // 如果提取到的文字太少，提示用户
       if (!text || text.length < 50) {
-        text = "This PDF appears to be scanned or image-based and cannot be directly parsed.\n\nSolutions:\n1. Convert PDF to text-based format (Save As/Searchable PDF)\n2. Or upload an image file (PNG/JPG) - I can recognize it directly";
+        text = "This PDF appears to be scanned or image-based and cannot be directly parsed.\n\nPlease convert to a text-based PDF.";
       }
-    } else if (fileName.match(/\.(png|jpg|jpeg|gif|bmp|webp)$/)) {
-      // 图片文件 - 使用OCR
-      console.log("Processing image with OCR...");
-      // 转换为base64
-      const base64 = Buffer.from(arrayBuffer).toString('base64');
-      const mimeType = fileName.match(/\.jpe?g$/i) ? 'image/jpeg' : 
-                       fileName === '.png' ? 'image/png' : 'image/gif';
-      const dataUrl = `data:${mimeType};base64,${base64}`;
-      
-      const result = await Tesseract.recognize(dataUrl, 'chi_sim+eng', {
-        logger: () => {}
-      });
-      text = result.data.text;
-      isOCR = true;
     } else {
       return NextResponse.json(
-        { error: "Unsupported file format. Please upload PDF or image files." },
+        { error: "Unsupported file format. Please upload PDF files." },
         { status: 400 }
       );
     }
@@ -63,11 +62,11 @@ export async function POST(request: NextRequest) {
       text = text.slice(0, maxLength) + "\n\n[Content truncated...]";
     }
 
-    return NextResponse.json({ text, isOCR });
+    return NextResponse.json({ text, isOCR: false });
   } catch (error: any) {
     console.error("Extraction error:", error);
     return NextResponse.json(
-      { error: error.message || "File parsing failed. Please ensure it's a valid PDF or image file." },
+      { error: error.message || "File parsing failed. Please try another PDF." },
       { status: 500 }
     );
   }

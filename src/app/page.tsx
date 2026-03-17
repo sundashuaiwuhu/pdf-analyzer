@@ -117,15 +117,15 @@ export default function Home() {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".pdf,.png,.jpg,.jpeg,.gif,.bmp,.webp"
+              accept=".pdf"
               onChange={handleFileChange}
               className="hidden"
             />
-            <div className="text-4xl mb-2">📁</div>
+            <div className="text-4xl mb-2">📄</div>
             <p className="text-gray-600">
-              Drag and drop your PDF or image here, or click to browse
+              Drag and drop your PDF here, or click to browse
             </p>
-            <p className="text-sm text-gray-400 mt-2">Max file size: 10MB (PDF or Image)</p>
+            <p className="text-sm text-gray-400 mt-2">Max file size: 10MB (PDF only)</p>
           </div>
 
           {file && (
