@@ -36,15 +36,13 @@ export default function Home() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
-    if (selectedFile && (
-      selectedFile.type === "application/pdf" || 
-      selectedFile.type.startsWith("image/")
-    )) {
+    if (selectedFile) {
+      console.log("File selected:", selectedFile.name, selectedFile.type);
       setFile(selectedFile);
       setResult("");
       setPdfText("");
     } else {
-      alert("Please upload a PDF or image file");
+      alert("Please select a file");
     }
   };
 
