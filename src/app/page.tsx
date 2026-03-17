@@ -1,29 +1,47 @@
 "use client";
 
 import { useState, useRef } from "react";
-import axios from "axios";
+import * as pdfjsLib from "pdfjs-dist";
 
-// PDF解析工具函数
+// 设置 worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.mjs`;
+
+// PDF解析函数 (客户端)
 async function extractTextFromPDF(file: File): Promise<string> {
-  const formData = new FormData();
-  formData.append("file", file);
-
-  const response = await axios.post("/api/extract-pdf", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
-
-  return response.data.text;
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  
+  let fullText = "";
+  const maxPages = Math.min(pdf.numPages, 50);
+  
+  for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
+    const page = await pdf.getPage(pageNum);
+    const textContent = await page.getTextContent();
+    const pageText = textContent.items
+      .map((item: any) => item.str)
+      .join(" ");
+    fullText += pageText + "\n\n";
+  }
+  
+  // 限制长度
+  if (fullText.length > 50000) {
+    fullText = fullText.slice(0, 50000) + "\n\n[内容已截断...]";
+  }
+  
+  return fullText;
 }
 
 // AI分析函数
 async function analyzeWithAI(text: string, mode: "summary" | "extract" | "qa", question?: string): Promise<string> {
-  const response = await axios.post("/api/analyze", {
-    text,
-    mode,
-    question,
+  const response = await fetch("/api/analyze", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text, mode, question }),
   });
-
-  return response.data.result;
+  
+  const data = await response.json();
+  if (data.error) throw new Error(data.error);
+  return data.result;
 }
 
 export default function Home() {
@@ -37,12 +55,9 @@ export default function Home() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
-      console.log("File selected:", selectedFile.name, selectedFile.type);
       setFile(selectedFile);
       setResult("");
       setPdfText("");
-    } else {
-      alert("Please select a file");
     }
   };
 
@@ -52,11 +67,15 @@ export default function Home() {
     setLoading(true);
     try {
       const text = await extractTextFromPDF(file);
-      setPdfText(text);
-      setResult("PDF上传成功！请选择分析功能。");
+      if (!text || text.length < 50) {
+        setResult("此PDF可能是扫描版，无法提取文字。请转换为文字版PDF后重试。");
+      } else {
+        setPdfText(text);
+        setResult("PDF上传成功！请选择分析功能。");
+      }
     } catch (error) {
       console.error(error);
-      setResult("PDF解析失败，请确保是文字版PDF");
+      setResult("PDF解析失败，请确保是有效的PDF文件");
     }
     setLoading(false);
   };
@@ -77,9 +96,9 @@ export default function Home() {
         mode === "qa" ? question : undefined
       );
       setResult(response);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      setResult("分析失败，请稍后重试");
+      setResult("分析失败: " + error.message);
     }
     setLoading(false);
   };
@@ -96,7 +115,6 @@ export default function Home() {
   return (
     <main className="min-h-screen p-8 bg-gray-50">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
         <header className="text-center mb-8">
           <h1 className="text-4xl font-bold text-indigo-600 mb-2">
             📄 PDF Analyzer
@@ -106,7 +124,6 @@ export default function Home() {
           </p>
         </header>
 
-        {/* Upload Section */}
         <section className="bg-white rounded-xl shadow-sm p-6 mb-6">
           <h2 className="text-xl font-semibold mb-4">1. Upload PDF</h2>
           
@@ -155,7 +172,6 @@ export default function Home() {
           </button>
         </section>
 
-        {/* Analysis Section */}
         {pdfText && (
           <section className="bg-white rounded-xl shadow-sm p-6 mb-6">
             <h2 className="text-xl font-semibold mb-4">2. AI Analysis</h2>
@@ -186,7 +202,6 @@ export default function Home() {
               </button>
             </div>
 
-            {/* Q&A Input */}
             <div className="flex gap-2 mb-4">
               <input
                 type="text"
@@ -206,7 +221,6 @@ export default function Home() {
           </section>
         )}
 
-        {/* Result Section */}
         {result && (
           <section className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="text-xl font-semibold mb-4">Analysis Result</h2>
@@ -224,9 +238,8 @@ export default function Home() {
           </section>
         )}
 
-        {/* Footer */}
         <footer className="text-center text-gray-500 text-sm mt-8">
-          Powered by MiniMax M2.5
+          Powered by SiliconFlow AI
         </footer>
       </div>
     </main>
