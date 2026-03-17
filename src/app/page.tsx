@@ -1,15 +1,25 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import * as pdfjsLib from "pdfjs-dist";
 
-// 设置 worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.mjs`;
+// 使用本地 worker（通过 blob URL）
+useEffect(() => {
+  // 设置 worker 为禁用，使用主线程解析
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "";
+}, []);
 
 // PDF解析函数 (客户端)
 async function extractTextFromPDF(file: File): Promise<string> {
   const arrayBuffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  
+  // 不使用 worker，在主线程解析
+  const pdf = await pdfjsLib.getDocument({
+    data: arrayBuffer,
+    useWorkerFetch: false,
+    isEvalSupported: false,
+    useSystemFonts: true,
+  }).promise;
   
   let fullText = "";
   const maxPages = Math.min(pdf.numPages, 50);
