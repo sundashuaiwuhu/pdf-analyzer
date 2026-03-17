@@ -1,24 +1,18 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import * as pdfjsLib from "pdfjs-dist";
+import { useState, useRef } from "react";
+import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.js";
 
-// 使用本地 worker（通过 blob URL）
-useEffect(() => {
-  // 设置 worker 为禁用，使用主线程解析
-  pdfjsLib.GlobalWorkerOptions.workerSrc = "";
-}, []);
+// 设置 worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.worker.min.js`;
 
 // PDF解析函数 (客户端)
 async function extractTextFromPDF(file: File): Promise<string> {
   const arrayBuffer = await file.arrayBuffer();
+  const uint8Array = new Uint8Array(arrayBuffer);
   
-  // 不使用 worker，在主线程解析
   const pdf = await pdfjsLib.getDocument({
-    data: arrayBuffer,
-    useWorkerFetch: false,
-    isEvalSupported: false,
-    useSystemFonts: true,
+    data: uint8Array,
   }).promise;
   
   let fullText = "";
