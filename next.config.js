@@ -1,5 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Cloudflare Pages 配置
+  output: 'standalone',
+  images: {
+    unoptimized: true,
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: "10mb",

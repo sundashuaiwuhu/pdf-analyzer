@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 
+export const runtime = 'edge';
+
 const API_KEY = process.env.API_KEY;
 const BASE_URL = process.env.BASE_URL || "https://api.siliconflow.cn/v1";
 const MODEL = process.env.MODEL || "Qwen/Qwen2.5-7B-Instruct";

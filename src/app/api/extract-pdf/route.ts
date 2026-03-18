@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const runtime = 'edge';
+
 export async function POST(request: NextRequest) {
   // 后端不再负责 PDF 解析，现在只做简单响应
   return NextResponse.json({ 
