@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.js";
-import { useSession, signIn, signOut } from "next-auth/react";
 
 // 设置 worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.worker.min.js`;
@@ -49,14 +48,40 @@ async function analyzeWithAI(text: string, mode: "summary" | "extract" | "qa", q
   return data.result;
 }
 
+interface User {
+  email: string;
+  name: string;
+  picture?: string;
+}
+
 export default function Home() {
-  const { data: session, status } = useSession();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   const [file, setFile] = useState<File | null>(null);
   const [pdfText, setPdfText] = useState<string>("");
-  const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string>("");
   const [question, setQuestion] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 检查登录状态
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  async function checkAuth() {
+    try {
+      const res = await fetch("/api/auth/session");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.user) {
+          setUser(data.user);
+        }
+      }
+    } catch (e) {
+      console.error("Auth check failed", e);
+    }
+    setLoading(false);
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -122,8 +147,18 @@ export default function Home() {
     }
   };
 
-  // 未登录时显示登录界面
-  if (status === "loading") {
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    setUser(null);
+  };
+
+  // 登录
+  const handleLogin = () => {
+    window.location.href = "/api/auth?mode=login";
+  };
+
+  // 加载中
+  if (loading) {
     return (
       <main className="min-h-screen p-8 bg-gray-50 flex items-center justify-center">
         <div className="text-gray-600">Loading...</div>
@@ -131,7 +166,8 @@ export default function Home() {
     );
   }
 
-  if (!session) {
+  // 未登录
+  if (!user) {
     return (
       <main className="min-h-screen p-8 bg-gray-50">
         <div className="max-w-4xl mx-auto">
@@ -153,7 +189,7 @@ export default function Home() {
               Please sign in with your Google account to use this application
             </p>
             <button
-              onClick={() => signIn("google")}
+              onClick={handleLogin}
               className="bg-indigo-600 text-white py-3 px-8 rounded-lg font-medium hover:bg-indigo-700 transition-colors inline-flex items-center gap-2"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -189,22 +225,22 @@ export default function Home() {
         {/* 用户信息栏 */}
         <div className="flex justify-between items-center mb-6 bg-white rounded-lg shadow-sm p-4">
           <div className="flex items-center gap-3">
-            {session.user?.image ? (
-              <img src={session.user.image} alt="avatar" className="w-10 h-10 rounded-full" />
+            {user.picture ? (
+              <img src={user.picture} alt="avatar" className="w-10 h-10 rounded-full" />
             ) : (
               <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
                 <span className="text-indigo-600 font-medium">
-                  {session.user?.name?.charAt(0) || "U"}
+                  {user.name?.charAt(0) || "U"}
                 </span>
               </div>
             )}
             <div>
-              <p className="font-medium text-gray-800">{session.user?.name}</p>
-              <p className="text-sm text-gray-500">{session.user?.email}</p>
+              <p className="font-medium text-gray-800">{user.name}</p>
+              <p className="text-sm text-gray-500">{user.email}</p>
             </div>
           </div>
           <button
-            onClick={() => signOut()}
+            onClick={handleLogout}
             className="text-gray-600 hover:text-gray-800 text-sm"
           >
             Sign Out

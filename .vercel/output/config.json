@@ -124,10 +124,18 @@
       "status": 404
     },
     {
+      "src": "^/api/auth/(?<nxtPnextauth>.+?)(?:\\.rsc)(?:/)?$",
+      "dest": "/api/auth/[...nextauth].rsc?nxtPnextauth=$nxtPnextauth"
+    },
+    {
+      "src": "^/api/auth/(?<nxtPnextauth>.+?)(?:/)?$",
+      "dest": "/api/auth/[...nextauth]?nxtPnextauth=$nxtPnextauth"
+    },
+    {
       "handle": "hit"
     },
     {
-      "src": "/_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media|clL34j1hFyxB4ytwZhk1H)/.+",
+      "src": "/_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media|5oWpIE5J4WA6x4QjLwc32)/.+",
       "headers": {
         "cache-control": "public,max-age=31536000,immutable"
       },

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import axios from "axios";
 
 export const runtime = 'edge';
 
@@ -40,43 +39,41 @@ const PROMPTS = {
 };
 
 async function callAI(prompt: string): Promise<string> {
-  try {
-    const response = await axios.post(
-      `${BASE_URL}/chat/completions`,
-      {
-        model: MODEL,
-        messages: [
-          {
-            role: "system",
-            content: "你是一个专业的文档分析助手，擅长理解和总结各类文档内容。请用中文回答问题。",
-          },
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-        max_tokens: 2048,
-        temperature: 0.7,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${API_KEY}`,
-          "Content-Type": "application/json",
+  const response = await fetch(`${BASE_URL}/chat/completions`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      messages: [
+        {
+          role: "system",
+          content: "你是一个专业的文档分析助手，擅长理解和总结各类文档内容。请用中文回答问题。",
         },
-        timeout: 60000,
-      }
-    );
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      max_tokens: 2048,
+      temperature: 0.7,
+    }),
+  });
 
-    if (!response.data || !response.data.choices || !response.data.choices[0]) {
-      console.error("Invalid API response:", response.data);
-      throw new Error("Invalid API response");
-    }
-
-    return response.data.choices[0].message.content;
-  } catch (error: any) {
-    console.error("API error:", error.response?.data || error.message);
-    throw new Error(error.response?.data?.message || "AI analysis failed");
+  if (!response.ok) {
+    const errorData = await response.text();
+    throw new Error(`API error: ${response.status} - ${errorData}`);
   }
+
+  const data = await response.json();
+  
+  if (!data.choices || !data.choices[0]) {
+    throw new Error("Invalid API response");
+  }
+
+  return data.choices[0].message.content;
 }
 
 export async function POST(request: NextRequest) {

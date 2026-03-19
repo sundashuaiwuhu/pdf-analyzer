@@ -1,0 +1,1 @@
+var r={},_=(s,i,l)=>(r.__chunk_9604=(c,n,t)=>{"use strict";t.d(n,{iC:()=>a}),t(4319);var o=t(6534);function a(){let e=o.Z.getStore();return e?.rootTaskSpawnPhase==="action"}},r);export{_ as __getNamedExports};
